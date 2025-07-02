@@ -1,7 +1,7 @@
 function [J_matrix] = jacobian_evalue(r_dot,r_r,r_sv)
 %估算f相对于r_r的雅可比矩阵
 %   此处显示详细说明
-delta=1;
+delta=1e4;
 deltaI=eye(3).*delta;
 r_r_delta=[r_r r_r r_r]+deltaI;
 f_value=f(r_dot,r_r,r_sv);

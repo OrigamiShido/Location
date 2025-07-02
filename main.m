@@ -3,75 +3,45 @@ targetTime=[datetime(2025,5,17,15,39,57,698,'TimeZone',hours(8)) datetime(2025,5
 latitude_true=30.5288888;
 longitude_true=114.3530555;
 altitude_true=56;
+carrierfrequency=11.325e9;
 %% 正过程：获得目标时间内的多普勒频移
 [frequencyRate,position,velosity]=dopplercalc(datetime(2025,5,17,15,39,57,698,'TimeZone',hours(8)));
 
 %% 反过程：构建方程并求解
 
+% 选取值
+dopplershift=frequencyRate{1,[1 4 6 7 8 10]};
+r_sv=squeeze(position(:,1,[1 4 6 7 8 10]));
+r_dot=squeeze(velosity(:,1,[1 4 6 7 8 10]));
+
 % 假定真值坐标
-[x_true,y_true,z_true]=lla2ecef([latitude_true longitude_true altitude_true]);
-r_r_true = [x_true; y_true; z_true]; % 真实ECEF, 单位m
+r_r_true=lla2ecef([latitude_true longitude_true altitude_true]);
 
-% Step 2: 整理数据
-sv_names = frequencyRate.Properties.VariableNames; % 卫星名称
-time_names = frequencyRate.Properties.RowNames;    % 时间字符串
-N_sv = numel(sv_names);
-N_obs = numel(time_names);
+% Step 3: 设置初始ECEF坐标（更合理的初始值）
+% 在真实位置附近随机偏移，而不是完全随机
+r_r_true_initial = lla2ecef([latitude_true longitude_true altitude_true]);
+% 在真实位置周围1km范围内随机偏移
+offset_range = 1000; % 1km偏移范围
+r_r_0 = r_r_true_initial + (rand(3,1)-0.5)*2*offset_range;
 
-% 假设position和velosity是 3 x N_sv x N_obs 或 3 x N_obs x N_sv 格式
-% 这里假定为 3 x N_obs x N_sv
-Z = cell(1, N_sv);
-f_d = cell(1, N_sv);
-r_sv = cell(1, N_sv);
-dot_r_sv = cell(1, N_sv);
+r_r=newton_gauss(r_dot,r_r_0,r_sv,dopplershift,carrierfrequency,1e-6,2000);
 
-for i = 1:N_sv
-    % 多普勒频移观测，N_obs x 1
-    Z{i} = frequencyRate{:, sv_names{i}};
-    % f_d 全1
-    f_d{i} = ones(N_obs, 1);
-    % 卫星位置和速度，3 x N_obs
-    r_sv{i} = squeeze(position(:, :, i));    % 3 x N_obs
-    dot_r_sv{i} = squeeze(velosity(:, :, i));% 3 x N_obs
-end
+r_r_lla=ecef2lla(r_r');
 
-% Step 3: 随机生成初始ECEF坐标
-% 以地心为中心，半径在[6371km, 6371km+1000km]范围内随机一个点为初值（可按实际需求调整）
-earth_radius = 6371000;
-r_r_0 = earth_radius * (rand(3,1)-0.5)*2 + [0;0;0];
+error=r_r_lla-[latitude_true longitude_true altitude_true];
+error_norm=norm(error);
 
-% Step 4: 设定收敛参数
-epsilon = 1e-6;
-max_iter = 20;
+% 输出结果
+fprintf('\n=== 定位结果 ===\n');
+fprintf('真实位置: 纬度=%.6f°, 经度=%.6f°, 高度=%.1fm\n', latitude_true, longitude_true, altitude_true);
+fprintf('估计位置: 纬度=%.6f°, 经度=%.6f°, 高度=%.1fm\n', r_r_lla(1), r_r_lla(2), r_r_lla(3));
+fprintf('误差: 纬度=%.6f°, 经度=%.6f°, 高度=%.1fm\n', error(1), error(2), error(3));
+fprintf('总误差范数: %.6f\n', error_norm);
 
-% Step 5: 调用最小二乘法主函数
-[r_r_est, a_est, err_hist] = NGoptimization(Z, f_d, r_sv, dot_r_sv, r_r_0, epsilon, max_iter);
-
-% Step 6: 显示结果
-disp("估计的接收机坐标(ECEF):");
-disp(r_r_est);
-disp("估计的偏差参数:");
-disp(a_est);
-disp("误差收敛历史:");
-disp(err_hist);
-
-%% 
-% 示例表格
-T = table([1;2;3], [4;5;6], 'VariableNames', {'A', 'B'}, 'RowNames', {'X', 'Y', 'Z'});
-
-% 已知行名和列名
-rowName = 'Y';
-colName = 'B';
-
-% 找索引
-rowIdx = find(strcmp(T.Properties.RowNames, rowName));
-colIdx = find(strcmp(T.Properties.VariableNames, colName));
-
-% 数值索引
-disp(['行索引: ', num2str(rowIdx), ', 列索引: ', num2str(colIdx)]);
-% 取出该点的值
-value = T{rowIdx, colIdx};
-disp(['对应数值: ', num2str(value)]);
-
-
-
+% 计算水平距离误差（更直观）
+R_earth = 6371000; % 地球半径
+lat_error_m = error(1) * pi/180 * R_earth;
+lon_error_m = error(2) * pi/180 * R_earth * cos(latitude_true * pi/180);
+horizontal_error = sqrt(lat_error_m^2 + lon_error_m^2);
+fprintf('水平位置误差: %.2f 米\n', horizontal_error);
+fprintf('高度误差: %.2f 米\n', error(3));
