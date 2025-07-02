@@ -1,4 +1,4 @@
-function [frequencyRate,azimuth,elevations]=dopplercalc(targetTime)
+function [frequencyRate,position,velosity]=dopplercalc(targetTime)
 %% 定义数值
 % tic
 disp('begin...')
@@ -29,7 +29,7 @@ disp('Predicting Doppler shift...')
 carrierFrequency=11.325e9;
 [frequencyShift,timeOut,dopplerInfo] = dopplershift(sat,gs,Frequency=carrierFrequency);
 frequencyRate = dopplerInfo.DopplerRate;
-relativeVelocity = dopplerInfo.RelativeVelocity;
+% relativeVelocity = dopplerInfo.RelativeVelocity;
 
 %% 做表，删除nan行
 rowname=string(starttime:seconds(sampletime):starttime+seconds(durationtimeSeconds-1));
@@ -39,33 +39,14 @@ frequencyRate(:,all(isnan(frequencyRate{:,:})))=[];
 %% 获取位置
 disp('getting positions and predicting...')
 
-[position,~]=states(sat,CoordinateFrame='ecef');
+[position,velosity]=states(sat,CoordinateFrame='ecef');
 % [position_lla,velocity_lla]=states(sat,CoordinateFrame='geographic');
 %% 预报
 
 % 获取地面站 ECEF 坐标
-gsLLA = [latitude, longitude, altitude];
-gsECEF = lla2ecef(gsLLA);
-% 转换卫星坐标为ENU
-[xn,ye,zup]=ecef2enu(position(1,:,:),position(2,:,:),position(3,:,:),gsLLA(1),gsLLA(2),gsLLA(3),wgs84Ellipsoid);
-% 转换ENU坐标为AER
-[azimuth,elevations]=enu2aer(xn,ye,zup);
-% 数组降维
-azimuth=squeeze(azimuth);
-elevations=squeeze(elevations);
-% 转换为表
-rowname=string(starttime:seconds(sampletime):starttime+seconds(durationtimeSeconds));
-azimuth=array2table(squeeze(azimuth),"RowNames",rowname,"VariableNames",sat.Name);
-elevations=array2table(squeeze(elevations),"RowNames",rowname,"VariableNames",sat.Name);
-
-% %% 设置卫星的可见性(optional)
-% 
-% disp('computing visibility...')
-% ac=access(gs,sat);
-% intvls = accessIntervals(ac);
-% intvls = sortrows(intvls,"StartTime","ascend");
-% % 切换时区
-% intvls.StartTime.TimeZone='Asia/Shanghai';
-% intvls.EndTime.TimeZone='Asia/Shanghai';
+% gsLLA = [latitude, longitude, altitude];
+% gsECEF = lla2ecef(gsLLA);
+% % 转换为表
+% rowname=string(starttime:seconds(sampletime):starttime+seconds(durationtimeSeconds));
 
 end
