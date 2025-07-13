@@ -8,23 +8,26 @@ function r_r=newton_gauss(r_dot,r_r,r_sv,dopplerShift,carrierFrequency,epsilon,m
 
 numSample=size(r_dot,2);
 nu_history=[];
-J=Jcalc(r_dot,r_r,r_sv,numSample);
+% r_r_init=r_r;
+% J=Jcalc(r_dot,r_r,r_sv,numSample);
 
 for m=1:max_iter
     % 更新z,J
 
-    % J=Jcalc(r_dot,r_r,r_sv,numSample);
+    J=Jcalc(r_dot,r_r,r_sv,numSample);
     z=zcalc(dopplerShift,carrierFrequency,r_r,r_dot,r_sv,numSample);
 
     % 计算x_hat
 
-    x_hat=(J.'*J)^-1*J.'*z;
+    x_hat=pinv((J')*J)*(J')*z;
 
     % r_r前进步长
 
     deltax=[x_hat(1) x_hat(2) x_hat(3)]';
 
-    r_r=r_r+deltax;
+    r_r=r_r+1000.*deltax;
+    
+    ecef2lla(r_r')
 
     % 计算nuz
 
@@ -32,9 +35,10 @@ for m=1:max_iter
     if m==1
         nu_1=nu;
     end
-    nu_history=[nu_history norm(nu)/norm(nu_1)];
+    err=norm(nu)/norm(nu_1);
+    nu_history=[nu_history err];
 
-    if (norm(deltax)<=epsilon||(norm(nu)/norm(nu_1)<=epsilon))
+    if (norm(deltax)<=epsilon||err<=epsilon)
         break;
     end
 end
