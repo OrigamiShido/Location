@@ -27,8 +27,6 @@ dopplerShift=frequencyRate{1,val}';
 r_sv=squeeze(position(:,1,val));
 r_dot=squeeze(velosity(:,1,val));
 
-ecef2lla(squeeze(position(:,1,79))');
-
 % 假定真值坐标
 r_r_true=lla2ecef([latitude_true longitude_true altitude_true]);
 
@@ -62,11 +60,17 @@ alt_new = altitude_true;
 lla_new = [rad2deg(lat_new), rad2deg(lon_new), alt_new];
 r_r_0 = lla2ecef(lla_new)';
  
-r_r=newton_gauss(r_dot,r_r_0,r_sv,dopplerShift,carrierfrequency,1e-6,2000);
+r_r=newton_gauss(r_dot,r_r_0,r_sv,dopplerShift,carrierfrequency,1e-4,200000);
 
 r_r_true_lla=ecef2lla(r_r_true);
 r_r_0_lla=ecef2lla(r_r_0');
 
 r_r_lla=ecef2lla(r_r');
+
+[xn,ye,zup]=ecef2enu(r_r(1),r_r(2),r_r(3),latitude_true,longitude_true,altitude_true,wgs84Ellipsoid);
+
+err_2d=norm([xn ye]);
+
+err_3d=norm([xn,ye,zup]);
 
 % plot(error_history)

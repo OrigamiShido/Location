@@ -10,7 +10,7 @@ function [J_matrix] = jacobian_evalue(r_dot,r_r,r_sv)
 % f_j_2=(f(r_dot,r_r_delta(:,2),r_sv)-f_value)/delta;
 % f_j_3=(f(r_dot,r_r_delta(:,3),r_sv)-f_value)/delta;
 % 
-% J_matrix2=[f_j_1 f_j_2 f_j_3];
+% J_matrix=[f_j_1 f_j_2 f_j_3];
 %% 精确法
 sigma2=norm(r_r-r_sv);
 sigma1=sigma2^3;
@@ -20,3 +20,5 @@ jacobi=@(r_dot,r_r,r_sv) r_dot/sigma2-((r_r-r_sv)*sigma3/sigma1);
 J_matrix=arrayfun(jacobi,r_dot,r_r,r_sv)';
 
 end
+
+% r_dot(1)/sigma2-((r_r(1)-r_sv(1)))*sigma3/sigma1

@@ -20,14 +20,15 @@ for m=1:max_iter
     % 计算x_hat
 
     x_hat=pinv((J')*J)*(J')*z;
+    % x_hat=(J'*J)\(J'*z);
 
     % r_r前进步长
 
-    deltax=[x_hat(1) x_hat(2) x_hat(3)]';
+    deltax=1e2.*[x_hat(1) x_hat(2) x_hat(3)]';
 
-    r_r=r_r+1000.*deltax;
+    r_r=r_r+deltax;
     
-    ecef2lla(r_r')
+    % ecef2lla(r_r')
 
     % 计算nuz
 
